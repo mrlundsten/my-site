@@ -32,6 +32,33 @@ type Story = {
   gallery: StoryImage[];
 };
 
+type MicroDoc = {
+  id: string;
+  label: string;
+  title: string;
+  descriptor: string;
+  runtime: string;
+  poster: StoryImage;
+  vimeoUrl: string;
+  vimeoSourceFile: string;
+  video: {
+    src: string | null;
+    mimeType: string;
+    poster: string;
+  };
+};
+
+function createVimeoEmbedUrl(vimeoUrl: string) {
+  const match = vimeoUrl.match(/vimeo\.com\/(\d+)\/([a-zA-Z0-9]+)/);
+
+  if (!match) {
+    return vimeoUrl;
+  }
+
+  const [, videoId, hash] = match;
+  return `https://player.vimeo.com/video/${videoId}?h=${hash}&title=0&byline=0&portrait=0&badge=0&autopause=0&player_id=0&app_id=58479`;
+}
+
 function groupStoryImages(images: StoryImage[]) {
   const pattern = [2, 3, 2, 3];
   const groups: Array<{ images: StoryImage[]; startIndex: number; variant: number }> = [];
@@ -610,9 +637,99 @@ const FEATURED_CAROUSEL_TUNING = {
   depthRotateY: 5.5,
 } as const;
 
+const microDocumentaries: MicroDoc[] = [
+  {
+    id: "ephraim-pottery",
+    label: "01",
+    title: "Ephraim Pottery",
+    descriptor: "Micro documentary",
+    runtime: "Vimeo",
+    poster: {
+      src: "/home/micro-docs/ephraim/cover-image-ephraim-pottery.png",
+      alt: "Cover image for Ephraim Pottery.",
+      width: 3024,
+      height: 1510,
+    },
+    vimeoUrl: "https://vimeo.com/1178515551/732a9ee3ec?fl=ml&fe=ec",
+    vimeoSourceFile:
+      "/Users/blundsten/Desktop/My Workspace/2. Areas/Website Build/Homepage/Featured Work/Micro Docs/Ephraim Pottery/Ephraim Pottery Vimeo Link.rtf",
+    video: {
+      src: null as string | null,
+      mimeType: "video/mp4",
+      poster: "/home/micro-docs/ephraim/cover-image-ephraim-pottery.png",
+    },
+  },
+  {
+    id: "what-child-is-this",
+    label: "02",
+    title: "What Child Is This?",
+    descriptor: "Micro documentary",
+    runtime: "Vimeo",
+    poster: {
+      src: "/home/micro-docs/what-child/cover-image-what-child-is-this.png",
+      alt: "Cover image for What Child Is This?.",
+      width: 3024,
+      height: 1454,
+    },
+    vimeoUrl: "https://vimeo.com/1178516319/b3219ff1a4?fl=ml&fe=ec",
+    vimeoSourceFile:
+      "/Users/blundsten/Desktop/My Workspace/2. Areas/Website Build/Homepage/Featured Work/Micro Docs/What Child Is This?/What Child IS this Vimeo Link.rtf",
+    video: {
+      src: null as string | null,
+      mimeType: "video/mp4",
+      poster: "/home/micro-docs/what-child/cover-image-what-child-is-this.png",
+    },
+  },
+  {
+    id: "sanctify-the-arts",
+    label: "03",
+    title: "Sanctify The Arts",
+    descriptor: "Micro documentary",
+    runtime: "Vimeo",
+    poster: {
+      src: "/home/micro-docs/sanctify/cover-image-bill-sanctify-the-arts.png",
+      alt: "Cover image for Sanctify The Arts.",
+      width: 3024,
+      height: 1516,
+    },
+    vimeoUrl: "https://vimeo.com/1178517000/ed5fc1a55a?fl=ml&fe=ec",
+    vimeoSourceFile:
+      "/Users/blundsten/Desktop/My Workspace/2. Areas/Website Build/Homepage/Featured Work/Micro Docs/William Bukowski Sanctify The Arts/William Bukowski Vimeo Link.rtf",
+    video: {
+      src: null as string | null,
+      mimeType: "video/mp4",
+      poster:
+        "/home/micro-docs/sanctify/cover-image-bill-sanctify-the-arts.png",
+    },
+  },
+  {
+    id: "marcus-thomas-the-prism-effect",
+    label: "04",
+    title: "Marcus Thomas: The Prism Effect",
+    descriptor: "Micro documentary",
+    runtime: "Vimeo",
+    poster: {
+      src: "/home/micro-docs/marcus/cover-image-marcus-thomas.png",
+      alt: "Cover image for Marcus Thomas: The Prism Effect.",
+      width: 3024,
+      height: 1511,
+    },
+    vimeoUrl: "https://vimeo.com/1178516129/c8ba108fbe?fl=ml&fe=ec",
+    vimeoSourceFile:
+      "/Users/blundsten/Desktop/My Workspace/2. Areas/Website Build/Homepage/Featured Work/Micro Docs/Marcus Thomas The Prism Effect/Marcus Thomas Vimeo Link.rtf",
+    video: {
+      src: null as string | null,
+      mimeType: "video/mp4",
+      poster: "/home/micro-docs/marcus/cover-image-marcus-thomas.png",
+    },
+  },
+] as const;
+
 export function FeaturedWorkSwitcher() {
   const [activeId, setActiveId] = useState(stories[0].id);
+  const [activeMicroDocId, setActiveMicroDocId] = useState(microDocumentaries[0].id);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [openMicroDocId, setOpenMicroDocId] = useState<string | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [closeHintVisible, setCloseHintVisible] = useState(false);
   const featuredCarouselViewportRef = useRef<HTMLDivElement | null>(null);
@@ -632,12 +749,15 @@ export function FeaturedWorkSwitcher() {
 
   const activeStory = stories.find((story) => story.id === activeId) ?? stories[0];
   const openStory = stories.find((story) => story.id === openId) ?? null;
+  const openMicroDoc =
+    microDocumentaries.find((film) => film.id === openMicroDocId) ?? null;
   const lightboxStory = openStory ?? activeStory;
   const lightboxImages = openStory
     ? [lightboxStory.hero, ...lightboxStory.gallery]
     : lightboxStory.gallery;
   const lightboxImageCount = lightboxImages.length;
-  const overlayVisible = openId !== null;
+  const photoOverlayVisible = openId !== null;
+  const microDocOverlayVisible = openMicroDocId !== null;
   const activeLightboxImage =
     lightboxIndex === null ? null : lightboxImages[lightboxIndex];
   const activeLightboxLabel =
@@ -748,7 +868,7 @@ export function FeaturedWorkSwitcher() {
   }, [lightboxImageCount]);
 
   useEffect(() => {
-    if (lightboxIndex !== null || overlayVisible) {
+    if (lightboxIndex !== null || photoOverlayVisible || microDocOverlayVisible) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.removeProperty("overflow");
@@ -757,7 +877,7 @@ export function FeaturedWorkSwitcher() {
     return () => {
       document.body.style.removeProperty("overflow");
     };
-  }, [lightboxIndex, overlayVisible]);
+  }, [lightboxIndex, microDocOverlayVisible, photoOverlayVisible]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -768,6 +888,7 @@ export function FeaturedWorkSwitcher() {
         }
 
         setOpenId(null);
+        setOpenMicroDocId(null);
       }
 
       if (lightboxIndex === null) {
@@ -793,14 +914,25 @@ export function FeaturedWorkSwitcher() {
     setOpenId(storyId);
   };
 
+  const handleMicroDocOpen = (microDocId: string) => {
+    setActiveMicroDocId(microDocId);
+    setOpenId(null);
+    setLightboxIndex(null);
+    setOpenMicroDocId(microDocId);
+  };
+
   const closeStoryWindow = () => {
     setOpenId(null);
     setLightboxIndex(null);
     setCloseHintVisible(false);
   };
 
+  const closeMicroDocWindow = () => {
+    setOpenMicroDocId(null);
+  };
+
   useEffect(() => {
-    if (!overlayVisible) {
+    if (!photoOverlayVisible) {
       if (closeHintFrameRef.current !== null) {
         cancelAnimationFrame(closeHintFrameRef.current);
         closeHintFrameRef.current = null;
@@ -830,7 +962,7 @@ export function FeaturedWorkSwitcher() {
         closeHintFrameRef.current = null;
       }
     };
-  }, [overlayVisible]);
+  }, [photoOverlayVisible]);
 
   useEffect(() => {
     const viewport = featuredCarouselViewportRef.current;
@@ -1062,6 +1194,78 @@ export function FeaturedWorkSwitcher() {
     );
   };
 
+  const renderMicroDocPanel = (film: MicroDoc) => {
+    const embedUrl = createVimeoEmbedUrl(film.vimeoUrl);
+
+    return (
+      <article key={film.id} className="micro-doc-panel">
+        <div className="micro-doc-panel__content">
+          <header className="micro-doc-panel__header">
+            <AnimatedMeta
+              items={[film.label, film.descriptor, film.runtime]}
+              delayOffset={540}
+            />
+            <button
+              type="button"
+              className="featured-work-panel__close"
+              onClick={closeMicroDocWindow}
+            >
+              Close story
+            </button>
+          </header>
+
+          <div className="micro-doc-panel__copy micro-doc-panel__copy--animated">
+            <AnimatedHeading
+              text={film.title}
+              className="display-heading text-4xl leading-[0.94] md:text-6xl"
+              delayOffset={460}
+            />
+            <p className="micro-doc-panel__dek">
+              Vimeo-hosted micro documentary. Cover image and Vimeo source are mapped
+              from the local project folder so this can later swap to a self-hosted
+              or directly embedded player without changing the Story Window layout.
+            </p>
+          </div>
+
+          <div
+            className="micro-doc-panel__video micro-doc-panel__video--animated"
+            aria-label={`Vimeo player for ${film.title}`}
+          >
+            <div className="micro-doc-panel__video-frame">
+              <Image
+                src={film.poster.src}
+                alt={film.poster.alt}
+                width={film.poster.width}
+                height={film.poster.height}
+                className="micro-doc-panel__video-poster"
+              />
+              <iframe
+                src={embedUrl}
+                title={film.title}
+                allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
+                referrerPolicy="strict-origin-when-cross-origin"
+                allowFullScreen
+                loading="lazy"
+              />
+            </div>
+          </div>
+
+          <div className="micro-doc-panel__body micro-doc-panel__body--animated">
+            <p className="micro-doc-panel__paragraph" style={{ animationDelay: "180ms" }}>
+              This micro documentary is currently being delivered through Vimeo. The
+              player source is mapped from the Vimeo link saved in the project folder,
+              while the cover image remains available as the poster state for future
+              self-hosted or HTML5 video support.
+            </p>
+            <p className="micro-doc-panel__paragraph" style={{ animationDelay: "260ms" }}>
+              Source file: {film.vimeoSourceFile}
+            </p>
+          </div>
+        </div>
+      </article>
+    );
+  };
+
   return (
     <>
       <section id="featured-work" className="featured-work-shell white-band">
@@ -1070,7 +1274,7 @@ export function FeaturedWorkSwitcher() {
             <div className="featured-work-grid__intro">
               <p className="editorial-kicker">Featured work</p>
               <h2 className="display-heading text-4xl leading-[0.96] md:text-6xl">
-                Featured Stories
+                Photo Stories
               </h2>
               <p className="featured-work-grid__description">
                 A growing set of documentary and portrait stories shaped through
@@ -1125,11 +1329,94 @@ export function FeaturedWorkSwitcher() {
                 })}
               </div>
             </div>
+
+            <div className="micro-docs">
+              <div className="micro-docs__intro">
+                <h3 className="display-heading text-3xl leading-[0.96] md:text-5xl">
+                  Micro Documentaries
+                </h3>
+                <p className="micro-docs__description">
+                  Short documentary films shaped with the same editorial pacing,
+                  restraint, and visual attention as the photo stories above.
+                </p>
+              </div>
+
+              <div className="micro-docs__grid">
+                {microDocumentaries.map((film) => (
+                  <button
+                    key={film.id}
+                    type="button"
+                    onMouseEnter={() => setActiveMicroDocId(film.id)}
+                    onFocus={() => setActiveMicroDocId(film.id)}
+                    onClick={() => handleMicroDocOpen(film.id)}
+                    className="micro-doc-card"
+                    aria-label={`Open micro documentary ${film.title}`}
+                  >
+                    <div className="micro-doc-card__meta editorial-kicker">
+                      <span className="featured-story-card__label-clip">
+                        <span className="featured-story-card__label-text micro-doc-card__text micro-doc-card__text--top">
+                          {film.label}
+                        </span>
+                      </span>
+                      <span className="featured-story-card__label-clip">
+                        <span className="featured-story-card__label-text micro-doc-card__text micro-doc-card__text--top micro-doc-card__text--delay-sm">
+                          {film.runtime}
+                        </span>
+                      </span>
+                    </div>
+
+                    <div
+                      className="micro-doc-card__poster photo-motion"
+                      data-video-ready={film.video.src ? "true" : "false"}
+                    >
+                      {film.video.src ? (
+                        <video
+                          className="micro-doc-card__video"
+                          preload="metadata"
+                          playsInline
+                          muted
+                          poster={film.video.poster}
+                        >
+                          <source src={film.video.src} type={film.video.mimeType} />
+                        </video>
+                      ) : (
+                        <Image
+                          src={film.poster.src}
+                          alt={film.poster.alt}
+                          width={film.poster.width}
+                          height={film.poster.height}
+                        />
+                      )}
+                      <span className="micro-doc-card__play" aria-hidden="true">
+                        Play
+                      </span>
+                    </div>
+
+                    <div className="micro-doc-card__copy">
+                      <h4 className="micro-doc-card__title">
+                        <span className="featured-story-card__label-clip">
+                          <span className="featured-story-card__label-text micro-doc-card__text micro-doc-card__text--bottom">
+                            {film.title}
+                          </span>
+                        </span>
+                      </h4>
+                      <p className="micro-doc-card__descriptor">
+                        <span className="featured-story-card__label-clip">
+                          <span className="featured-story-card__label-text micro-doc-card__text micro-doc-card__text--bottom micro-doc-card__text--delay-md">
+                            {film.descriptor}
+                          </span>
+                        </span>
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {typeof document !== "undefined" && overlayVisible
+      {typeof document !== "undefined" && photoOverlayVisible
         ? createPortal(
             <div
               className="featured-work-overlay"
@@ -1143,9 +1430,9 @@ export function FeaturedWorkSwitcher() {
                 <div className="featured-work-overlay__layout">
                   <aside className="featured-work-rail featured-work-overlay__rail">
                     <div className="featured-work-rail__intro">
-                      <p className="editorial-kicker">Featured work</p>
+                      <p className="editorial-kicker">Featured Work</p>
                       <h2 className="display-heading text-3xl leading-[0.94] md:text-5xl">
-                        Selected stories.
+                        Photo Stories
                       </h2>
                     </div>
 
@@ -1175,7 +1462,6 @@ export function FeaturedWorkSwitcher() {
                         );
                       })}
                     </div>
-
                     <div
                       className="featured-work-overlay__close-zone"
                       onClick={closeStoryWindow}
@@ -1210,6 +1496,72 @@ export function FeaturedWorkSwitcher() {
               >
                 Close story
               </span>
+            </div>,
+            document.body
+          )
+        : null}
+
+      {typeof document !== "undefined" && microDocOverlayVisible
+        ? createPortal(
+            <div
+              className="micro-doc-overlay"
+              onClick={closeMicroDocWindow}
+              role="presentation"
+            >
+              <div
+                className="micro-doc-overlay__shell"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div className="micro-doc-overlay__layout">
+                  <aside className="micro-doc-rail micro-doc-overlay__rail">
+                    <div className="micro-doc-rail__intro">
+                      <p className="editorial-kicker">Featured Work</p>
+                      <h2 className="display-heading text-3xl leading-[0.94] md:text-5xl">
+                        Micro Docs
+                      </h2>
+                    </div>
+
+                    <div className="micro-doc-rail__list">
+                      {microDocumentaries.map((film) => {
+                        const isActive = film.id === activeMicroDocId;
+                        const isOpen = film.id === openMicroDocId;
+
+                        return (
+                          <button
+                            key={`micro-doc-overlay-${film.id}`}
+                            type="button"
+                            onMouseEnter={() => setActiveMicroDocId(film.id)}
+                            onFocus={() => setActiveMicroDocId(film.id)}
+                            onClick={() => handleMicroDocOpen(film.id)}
+                            className={`micro-doc-rail__item ${
+                              isActive ? "micro-doc-rail__item--active" : ""
+                            } ${isOpen ? "micro-doc-rail__item--open" : ""}`}
+                            aria-pressed={isOpen}
+                          >
+                            <div className="micro-doc-rail__meta">
+                              <span>{film.label}</span>
+                              <span>{film.runtime}</span>
+                            </div>
+                            <h3 className="micro-doc-rail__title">{film.title}</h3>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <button
+                      type="button"
+                      className="micro-doc-overlay__close"
+                      onClick={closeMicroDocWindow}
+                    >
+                      Close story
+                    </button>
+                  </aside>
+
+                  <div className="micro-doc-overlay__viewport">
+                    {openMicroDoc ? renderMicroDocPanel(openMicroDoc) : null}
+                  </div>
+                </div>
+              </div>
             </div>,
             document.body
           )
