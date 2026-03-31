@@ -635,6 +635,9 @@ const FEATURED_CAROUSEL_TUNING = {
   stopThreshold: 0.12,
   // Max rotateY applied to cards furthest from the viewport center.
   depthRotateY: 5.5,
+  // Initial offset uses a portion of the extra right-side bleed so the strip
+  // starts present in the viewport instead of padded inward on the left.
+  initialRightBias: 0.42,
 } as const;
 
 const microDocumentaries: MicroDoc[] = [
@@ -975,20 +978,34 @@ export function FeaturedWorkSwitcher() {
       "(hover: hover) and (pointer: fine)",
     ).matches;
 
-    const getViewportBleed = () => {
+    const getViewportLeftBleed = () => {
       const styles = window.getComputedStyle(viewport);
       return Number.parseFloat(styles.paddingLeft) || 0;
     };
+    const getViewportRightBleed = () => {
+      const styles = window.getComputedStyle(viewport);
+      return Number.parseFloat(styles.paddingRight) || 0;
+    };
     const maxX = () => Math.max(track.scrollWidth - viewport.clientWidth, 0);
-    const minX = () => -getViewportBleed();
+    const minX = () => -getViewportLeftBleed();
     const clampX = (value: number) => Math.min(maxX(), Math.max(minX(), value));
     const canScrollLeft = () => carouselBaseXRef.current > minX() + 1;
     const canScrollRight = () =>
       carouselBaseXRef.current < maxX() - 1;
+    const getInitialRestingX = () => {
+      const leftBleed = getViewportLeftBleed();
+      const rightBleed = getViewportRightBleed();
+      const weightedOverflowOffset = Math.max(
+        (rightBleed - leftBleed) * FEATURED_CAROUSEL_TUNING.initialRightBias,
+        0,
+      );
 
-    // Neutral resting position: start from zero instead of an arbitrary negative
-    // translate. The symmetric viewport bleed provides visual balance.
-    carouselBaseXRef.current = 0;
+      return clampX(weightedOverflowOffset);
+    };
+
+    // Starting offset is derived from the asymmetric viewport bleed so the
+    // carousel reads like a wider strip extending beyond the section.
+    carouselBaseXRef.current = getInitialRestingX();
     carouselMouseTargetOffsetRef.current = 0;
     carouselMouseCurrentOffsetRef.current = 0;
     carouselCurrentXRef.current = carouselBaseXRef.current;
@@ -1032,8 +1049,13 @@ export function FeaturedWorkSwitcher() {
     };
 
     const handleResize = () => {
-      // Re-clamp the neutral resting position when the viewport changes.
-      carouselBaseXRef.current = clampX(carouselBaseXRef.current);
+      // Recalculate the resting strip position from the current viewport bleed
+      // so the filmstrip stays balanced as the section resizes.
+      if (!carouselHoveredRef.current) {
+        carouselBaseXRef.current = getInitialRestingX();
+      } else {
+        carouselBaseXRef.current = clampX(carouselBaseXRef.current);
+      }
       carouselTargetXRef.current = clampX(
         carouselBaseXRef.current + carouselMouseCurrentOffsetRef.current,
       );
